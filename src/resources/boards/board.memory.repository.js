@@ -1,34 +1,40 @@
-const boards = require('../../mocks/boards.fixture');
-const Board = require('./board.model');
+const DB = require('../../utils/inMemoryDb');
+const { NOT_FOUND_ERROR } = require('../../errors/appError');
+const TABLE_NAME = 'Boards';
+const ENTITY_NAME = 'board';
 
-const getAll = () => boards;
-
-const getById = id => boards.find(board => board.id === id);
-
-const create = boardData => {
-  const newBoard = new Board(boardData);
-  boards.push(newBoard);
-
-  return newBoard;
+const getAll = async () => {
+  return DB.getAllEntities(TABLE_NAME);
 };
 
-const updateById = (id, newData) => {
-  const updatedBoardIndex = boards.findIndex(board => board.id === id);
-  boards[updatedBoardIndex] = { ...boards[updatedBoardIndex], ...newData };
+const get = async id => {
+  const board = await DB.getEntity(TABLE_NAME, id);
 
-  return boards[updatedBoardIndex];
+  if (!board) {
+    throw new NOT_FOUND_ERROR(ENTITY_NAME, { id });
+  }
+
+  return board;
 };
 
-const deleteById = id => {
-  const deletedBoardIndex = boards.findIndex(board => board.id === id);
-
-  return boards.splice(deletedBoardIndex, 1);
+const remove = async id => {
+  if (!(await DB.removeEntity(TABLE_NAME, id))) {
+    throw new NOT_FOUND_ERROR(ENTITY_NAME, { id });
+  }
 };
 
-module.exports = {
-  getAll,
-  getById,
-  create,
-  updateById,
-  deleteById
+const save = async board => {
+  return DB.saveEntity(TABLE_NAME, board);
 };
+
+const update = async board => {
+  const id = board.id;
+  const entity = await DB.updateEntity(TABLE_NAME, id, board);
+  if (!entity) {
+    throw new NOT_FOUND_ERROR(ENTITY_NAME, { id });
+  }
+
+  return entity;
+};
+
+module.exports = { getAll, get, remove, save, update };

@@ -1,50 +1,35 @@
-let tasks = require('../../mocks/tasks.fixture');
-const Task = require('./task.model');
+const DB = require('../../utils/inMemoryDb');
+const { NOT_FOUND_ERROR } = require('../../errors/appError');
+const TABLE_NAME = 'Tasks';
+const ENTITY_NAME = 'task';
 
-const getAll = () => tasks;
-
-const getById = (boardId, taskId) =>
-  tasks.find(task => task.boardId === boardId && task.id === taskId);
-
-const create = (boardId, taskData) => {
-  const newTask = new Task({ ...taskData, boardId });
-  tasks.push(newTask);
-
-  return newTask;
+const getAll = async boardId => {
+  return DB.getAllEntities(TABLE_NAME).filter(task => task.boardId === boardId);
 };
 
-const updateById = (boardId, taskId, newData) => {
-  const updatedTaskIndex = tasks.findIndex(
-    task => task.boardId === boardId && task.id === taskId
-  );
-  tasks[updatedTaskIndex] = { ...tasks[updatedTaskIndex], ...newData };
+const get = async (boardId, id) => {
+  const task = await DB.getEntity(TABLE_NAME, id);
 
-  return tasks[updatedTaskIndex];
+  if (!task || task.boardId !== boardId) {
+    throw new NOT_FOUND_ERROR(ENTITY_NAME, { boardId, id });
+  }
+
+  return task;
 };
 
-const deleteById = (boardId, taskId) => {
-  const index = tasks.findIndex(
-    task => task.boardId === boardId && task.id === taskId
-  );
-  tasks.splice(index, 1);
+const remove = async (boardId, id) => {
+  if (!(await DB.removeEntity(TABLE_NAME, id))) {
+    throw new NOT_FOUND_ERROR(ENTITY_NAME, { boardId, id });
+  }
 };
 
-const deleteByBoardId = boardId => {
-  tasks = tasks.filter(task => task.boardId !== boardId);
+const save = async task => {
+  return DB.saveEntity(TABLE_NAME, task);
 };
 
-const discharge = id => {
-  tasks.forEach(task => {
-    if (task.userId === id) task.userId = null;
-  });
+const update = async task => {
+  await get(task.boardId, task.id);
+  return DB.updateEntity(TABLE_NAME, task.id, task);
 };
 
-module.exports = {
-  getAll,
-  getById,
-  create,
-  updateById,
-  deleteById,
-  deleteByBoardId,
-  discharge
-};
+module.exports = { getAll, get, remove, save, update };

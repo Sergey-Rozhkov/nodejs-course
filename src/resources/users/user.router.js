@@ -1,37 +1,57 @@
+const { OK, NO_CONTENT } = require('http-status-codes');
 const router = require('express').Router();
 const User = require('./user.model');
-const usersService = require('./user.service');
+const userService = require('./user.service');
+const wrapAsync = require('../../utils/wrapAsync');
+const { id, user } = require('../../utils/validation/shemas');
+const validator = require('../../utils/validation/validator');
 
-router.route('/').get((req, res) => {
-  const users = usersService.getAll();
-  res.json(users.map(User.toResponse));
-});
+router.get(
+  '/',
+  wrapAsync(async (req, res) => {
+    const users = await userService.getAll();
+    await res.status(OK).json(users.map(User.toResponse));
+  })
+);
 
-router.route('/:id').get((req, res) => {
-  const reqUser = usersService.getById(req.params.id);
-  if (reqUser) {
-    res.json(User.toResponse(reqUser));
-  } else {
-    res.status(404).send('User not found');
-  }
-});
+router.get(
+  '/:id',
+  validator(id, 'params'),
+  wrapAsync(async (req, res) => {
+    const userEntity = await userService.get(req.params.id);
+    res.status(OK).send(User.toResponse(userEntity));
+  })
+);
 
-router.route('/').post((req, res) => {
-  const newUser = usersService.create(req.body);
-  res.type('json');
-  res.json(User.toResponse(newUser));
-});
+router.delete(
+  '/:id',
+  validator(id, 'params'),
+  wrapAsync(async (req, res) => {
+    await userService.remove(req.params.id);
+    res.sendStatus(NO_CONTENT);
+  })
+);
 
-router.route('/:id').put((req, res) => {
-  const editedUser = usersService.updateById(req.params.id, req.body);
-  res.type('json');
-  res.json(User.toResponse(editedUser));
-});
+router.post(
+  '/',
+  validator(user, 'body'),
+  wrapAsync(async (req, res) => {
+    const userEntity = await userService.save(User.fromRequest(req.body));
+    res.status(OK).send(User.toResponse(userEntity));
+  })
+);
 
-router.route('/:id').delete((req, res) => {
-  usersService.deleteById(req.params.id);
-  res.type('json');
-  res.status(204).send();
-});
+router.put(
+  '/:id',
+  validator(id, 'params'),
+  validator(user, 'body'),
+  wrapAsync(async (req, res) => {
+    const userEntity = await userService.update(
+      req.params.id,
+      User.fromRequest(req.body)
+    );
+    res.status(OK).send(User.toResponse(userEntity));
+  })
+);
 
 module.exports = router;

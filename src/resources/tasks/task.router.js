@@ -1,34 +1,59 @@
+const { OK, NO_CONTENT } = require('http-status-codes');
 const router = require('express').Router({ mergeParams: true });
-const tasksService = require('./task.service');
+const Task = require('./task.model');
+const boardService = require('./task.service');
+const wrapAsync = require('../../utils/wrapAsync');
+const { taskId } = require('../../utils/validation/shemas');
+const validator = require('../../utils/validation/validator');
 
-router.route('/').get((req, res) => {
-  const tasks = tasksService.getAll(req.params.boardId);
-  res.json(tasks);
-});
+router.get(
+  '/',
+  wrapAsync(async (req, res) => {
+    const boards = await boardService.getAll(req.params.boardId);
+    await res.status(OK).json(boards);
+  })
+);
 
-router.route('/:id').get((req, res) => {
-  const task = tasksService.getById(req.params.boardId, req.params.id);
+router.get(
+  '/:id',
+  validator(taskId, 'params'),
+  wrapAsync(async (req, res) => {
+    const board = await boardService.get(req.params.boardId, req.params.id);
+    res.status(OK).send(board);
+  })
+);
 
-  if (task) {
-    res.json(task);
-  } else {
-    res.status(404).send('Task not found');
-  }
-});
+router.delete(
+  '/:id',
+  validator(taskId, 'params'),
+  wrapAsync(async (req, res) => {
+    await boardService.remove(req.params.boardId, req.params.id);
+    res.sendStatus(NO_CONTENT);
+  })
+);
 
-router.route('/').post((req, res) => {
-  const task = tasksService.create(req.params.boardId, req.body);
-  res.json(task);
-});
+router.route('/').post(
+  wrapAsync(async (req, res) => {
+    const board = await boardService.save(
+      Task.fromRequest({ ...req.body, boardId: req.params.boardId })
+    );
+    res.status(OK).send(board);
+  })
+);
 
-router.route('/:id').put((req, res) => {
-  const task = tasksService.update(req.params.boardId, req.params.id, req.body);
-  res.json(task);
-});
-
-router.route('/:id').delete((req, res) => {
-  const task = tasksService.deleteById(req.params.boardId, req.params.id);
-  res.json(task);
-});
+router.put(
+  '/:id',
+  validator(taskId, 'params'),
+  wrapAsync(async (req, res) => {
+    const board = await boardService.update(
+      Task.fromRequest({
+        ...req.body,
+        id: req.params.id,
+        boardId: req.params.boardId
+      })
+    );
+    res.status(OK).send(board);
+  })
+);
 
 module.exports = router;
