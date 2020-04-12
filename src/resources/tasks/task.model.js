@@ -2,10 +2,10 @@ const uuid = require('uuid');
 
 class Task {
   constructor({
-    id = uuid(),
+    id = uuid.v4(),
     title = 'TITLE',
     order = 0,
-    description = 'Description',
+    description = 'DESCRIPTION',
     userId = null,
     boardId = null,
     columnId = null
@@ -17,6 +17,10 @@ class Task {
     this.userId = userId;
     this.boardId = boardId;
     this.columnId = columnId;
+  }
+
+  static fromRequest(body) {
+    return new Task(body);
   }
 }
 

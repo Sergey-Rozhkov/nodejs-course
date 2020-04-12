@@ -1,38 +1,39 @@
-const { users } = require('../../mocks/users.fixture');
-const User = require('./user.model');
+const DB = require('../../utils/inMemoryDb');
+const { NOT_FOUND_ERROR } = require('../../errors/appError');
+const TABLE_NAME = 'Users';
+const ENTITY_NAME = 'user';
 
-const getAll = () => {
-  return users;
+const getAll = async () => {
+  return DB.getAllEntities(TABLE_NAME);
 };
 
-const getById = id => {
-  return users.find(user => user.id === id);
+const get = async id => {
+  const user = await DB.getEntity(TABLE_NAME, id);
+
+  if (!user) {
+    throw new NOT_FOUND_ERROR(ENTITY_NAME, { id });
+  }
+
+  return user;
 };
 
-const create = userData => {
-  const newUser = new User(userData);
-  users.push(newUser);
-
-  return newUser;
+const remove = async id => {
+  if (!(await DB.removeEntity(TABLE_NAME, id))) {
+    throw new NOT_FOUND_ERROR(ENTITY_NAME, { id });
+  }
 };
 
-const updateById = (id, newData) => {
-  const editedUserIndex = users.findIndex(user => user.id === id);
-  users[editedUserIndex] = { ...users[editedUserIndex], ...newData };
-
-  return users[editedUserIndex];
+const save = async user => {
+  return DB.saveEntity(TABLE_NAME, user);
 };
 
-const deleteById = id => {
-  const deletedUserIndex = users.findIndex(user => user.id === id);
+const update = async (id, user) => {
+  const entity = await DB.updateEntity(TABLE_NAME, id, user);
+  if (!entity) {
+    throw new NOT_FOUND_ERROR(ENTITY_NAME, { id });
+  }
 
-  return users.splice(deletedUserIndex, 1);
+  return entity;
 };
 
-module.exports = {
-  getAll,
-  getById,
-  create,
-  updateById,
-  deleteById
-};
+module.exports = { getAll, get, remove, save, update };

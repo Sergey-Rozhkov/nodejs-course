@@ -1,36 +1,53 @@
+const { OK, NO_CONTENT } = require('http-status-codes');
 const router = require('express').Router();
-const boardsService = require('./board.service');
-const taskRouter = require('../tasks/task.router');
+const Board = require('./board.model');
+const boardService = require('./board.service');
+const wrapAsync = require('../../utils/wrapAsync');
+const { id } = require('../../utils/validation/shemas');
+const validator = require('../../utils/validation/validator');
 
-router.route('/').get((req, res) => {
-  const boards = boardsService.getAll();
-  res.json(boards);
-});
+router.get(
+  '/',
+  wrapAsync(async (req, res) => {
+    const boards = await boardService.getAll();
+    await res.status(OK).json(boards);
+  })
+);
 
-router.route('/:id').get((req, res) => {
-  const board = boardsService.getById(req.params.id);
-  if (board) {
-    res.json(board);
-  } else {
-    res.status(404).send('Board not found');
-  }
-});
+router.get(
+  '/:id',
+  validator(id, 'params'),
+  wrapAsync(async (req, res) => {
+    const board = await boardService.get(req.params.id);
+    res.status(OK).send(board);
+  })
+);
 
-router.route('/').post((req, res) => {
-  const board = boardsService.create(req.body);
-  res.json(board);
-});
+router.delete(
+  '/:id',
+  validator(id, 'params'),
+  wrapAsync(async (req, res) => {
+    await boardService.remove(req.params.id);
+    res.sendStatus(NO_CONTENT);
+  })
+);
 
-router.route('/:id').put((req, res) => {
-  const board = boardsService.updateById(req.params.id, req.body);
-  res.json(board);
-});
+router.route('/').post(
+  wrapAsync(async (req, res) => {
+    const board = await boardService.save(Board.fromRequest(req.body));
+    res.status(OK).send(board);
+  })
+);
 
-router.route('/:id').delete((req, res) => {
-  const board = boardsService.deleteById(req.params.id);
-  res.json(board);
-});
-
-router.use('/:boardId/tasks', taskRouter);
+router.put(
+  '/:id',
+  validator(id, 'params'),
+  wrapAsync(async (req, res) => {
+    const board = await boardService.update(
+      Board.fromRequest({ ...req.body, id: req.params.id })
+    );
+    res.status(OK).send(board);
+  })
+);
 
 module.exports = router;
