@@ -5,11 +5,11 @@ const swaggerUI = require('swagger-ui-express');
 const path = require('path');
 const YAML = require('yamljs');
 const morgan = require('morgan');
-const winston = require('./common/logging');
+const winston = require('./common/logger');
 const userRouter = require('./resources/users/user.router');
 const boardRouter = require('./resources/boards/board.router');
 const taskRouter = require('./resources/tasks/task.router');
-const errorHandler = require('./errors/errorHandler');
+const errorHandler = require('./common/error-handler');
 
 const app = express();
 const swaggerDocument = YAML.load(path.join(__dirname, '../doc/api.yaml'));
@@ -29,9 +29,7 @@ app.use('/', (req, res, next) => {
 app.use(
   morgan(
     ':method :status :url :query Body :body size :res[content-length] - :response-time ms',
-    {
-      stream: winston.stream
-    }
+    { stream: winston.stream }
   )
 );
 

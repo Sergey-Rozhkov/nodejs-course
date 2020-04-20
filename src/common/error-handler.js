@@ -1,7 +1,7 @@
 const { INTERNAL_SERVER_ERROR, getStatusText } = require('http-status-codes');
-const logger = require('../common/logging');
+const logger = require('./logger');
 
-const handle = (err, req, res, next) => {
+const errorHandler = (err, req, res, next) => {
   if (err.status) {
     res.status(err.status).send(err.message);
   } else {
@@ -13,4 +13,4 @@ const handle = (err, req, res, next) => {
   next();
 };
 
-module.exports = handle;
+module.exports = errorHandler;

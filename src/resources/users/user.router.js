@@ -1,56 +1,77 @@
-const { OK, NO_CONTENT } = require('http-status-codes');
 const router = require('express').Router();
 const User = require('./user.model');
-const userService = require('./user.service');
-const wrapAsync = require('../../utils/wrapAsync');
-const { id, user } = require('../../utils/validation/shemas');
-const validator = require('../../utils/validation/validator');
+const usersService = require('./user.service');
+const { ClientError } = require('../../common/error-classes');
+const { catchErrors } = require('../../common/catch-errors');
+const {
+  NOT_FOUND,
+  BAD_REQUEST,
+  OK,
+  NO_CONTENT,
+  getStatusText
+} = require('http-status-codes');
 
-router.get(
-  '/',
-  wrapAsync(async (req, res) => {
-    const users = await userService.getAll();
-    await res.status(OK).json(users.map(User.toResponse));
+router.route('/').get(
+  catchErrors(async (req, res) => {
+    const users = await usersService.getAll();
+    if (!users) {
+      throw new ClientError(NOT_FOUND);
+    }
+    res.status(OK).json(users.map(User.toResponse));
   })
 );
 
-router.get(
-  '/:id',
-  validator(id, 'params'),
-  wrapAsync(async (req, res) => {
-    const userEntity = await userService.get(req.params.id);
-    res.status(OK).send(User.toResponse(userEntity));
+router.route('/:id').get(
+  catchErrors(async (req, res) => {
+    const id = req.params.id;
+    const user = await usersService.getById(id);
+    if (!user) {
+      throw new ClientError(NOT_FOUND);
+    }
+    res.status(OK).json(User.toResponse(user));
   })
 );
 
-router.delete(
-  '/:id',
-  validator(id, 'params'),
-  wrapAsync(async (req, res) => {
-    await userService.remove(req.params.id);
-    res.sendStatus(NO_CONTENT);
+router.route('/').post(
+  catchErrors(async (req, res) => {
+    const { name, login, password } = req.body;
+    if (!name || !login || !password) {
+      throw new ClientError(BAD_REQUEST);
+    }
+    const userInfo = await usersService.create(name, login, password);
+    res.status(OK).json(User.toResponse(userInfo));
   })
 );
 
-router.post(
-  '/',
-  validator(user, 'body'),
-  wrapAsync(async (req, res) => {
-    const userEntity = await userService.save(User.fromRequest(req.body));
-    res.status(OK).send(User.toResponse(userEntity));
+router.route('/:id').put(
+  catchErrors(async (req, res) => {
+    const id = req.params.id;
+    const { name, login, password } = req.body;
+    if (!name && !login && !password) {
+      throw new ClientError(BAD_REQUEST);
+    }
+    const updateUser = await usersService.updateById({
+      id,
+      name,
+      login,
+      password
+    });
+    res
+      .status(OK)
+      .json({ message: 'User updated', user: User.toResponse(updateUser) });
   })
 );
 
-router.put(
-  '/:id',
-  validator(id, 'params'),
-  validator(user, 'body'),
-  wrapAsync(async (req, res) => {
-    const userEntity = await userService.update(
-      req.params.id,
-      User.fromRequest(req.body)
-    );
-    res.status(OK).send(User.toResponse(userEntity));
+router.route('/:id').delete(
+  catchErrors(async (req, res) => {
+    const id = req.params.id;
+    const deletedCount = await usersService.deleteById(id);
+
+    if (!deletedCount) {
+      throw new ClientError(NOT_FOUND);
+    }
+
+    res.status(NO_CONTENT).send(getStatusText(NO_CONTENT));
   })
 );
 

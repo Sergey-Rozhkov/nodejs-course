@@ -1,11 +1,28 @@
 const { PORT } = require('./common/config');
 const app = require('./app');
-const logger = require('./common/logging');
+const logger = require('./common/logger');
+const { connectToDB } = require('./common/mongo.client');
 
-process.on('unhandledRejection', reason => {
-  process.emit('uncaughtException', reason);
+process.on('uncaughtException', err => {
+  logger.error({
+    name: 'uncaughtException',
+    message: err.message
+  });
+  const { exit } = process;
+  logger.on('finish', () => exit(1));
 });
 
-app.listen(PORT, () =>
-  logger.info(`App is running on http://localhost:${PORT}`)
-);
+process.on('unhandledRejection', err => {
+  logger.error({
+    name: 'unhandledRejection',
+    message: err.message
+  });
+  const { exit } = process;
+  logger.on('finish', () => exit(1));
+});
+
+connectToDB(() => {
+  app.listen(PORT, () =>
+    logger.info(`App is running on http://localhost:${PORT}`)
+  );
+});
